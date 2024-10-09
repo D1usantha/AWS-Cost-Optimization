@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Resource-Check-Application
+
+  Sample SAM Template for Resource-Check-Application
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals: 
+  Function:
+    Timeout: 45
+    MemorySize: 128
+
+    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
+    LoggingConfig:
+      LogFormat: JSON
+Resources:
+  CheckSnapshotAgeFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: snapshot_age/
+      FunctionName: Check_Snapshot_Age
+      Handler: app.lambda_handler
+      Runtime: python3.10
+      Architectures:
+      - x86_64
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref SNSTopic
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'ec2:DescribeSnapshots'
+              Resource: '*'
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'sns:Publish'
+              Resource: !Ref SNSTopic
+  
+  ResourceCheckEventBridgeRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Name: MyEventBridgeRule
+      Description: 'Rule to trigger Lambda function'
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt CheckSnapshotAgeFunction.Arn
+          Id: 'MyLambdaFunctionTarget'
+      ScheduleExpression : cron(0/1 * * * ? *)
+
+  LambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !Ref CheckSnapshotAgeFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt ResourceCheckEventBridgeRule.Arn
+  
+  SNSTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      TopicName: "POC-AWS-Cost-Optimization"
+      DisplayName: "POC-AWS-Cost-Optimization"
+
+  SNSSubscription:
+    Type: "AWS::SNS::Subscription"
+    Properties:
+      TopicArn: !Ref SNSTopic
+      Protocol: "email"
+      Endpoint: "heloise.viegas@creativecapsule.com"
+
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  # HelloWorldApi:
+  #   Description: API Gateway endpoint URL for Prod stage for Hello World function
+  #   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  CheckSnapshotAgeFunction:
+    Description: Check Snapshot Age Function ARN
+    Value: !GetAtt CheckSnapshotAgeFunction.Arn
+  CheckSnapshotAgeFunctionIamRole:
+    Description: Implicit IAM Role created for Check Snapshot Age function
+    Value: !GetAtt CheckSnapshotAgeFunction.Arn
