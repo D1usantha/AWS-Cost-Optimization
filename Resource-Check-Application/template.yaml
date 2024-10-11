@@ -26,7 +26,7 @@ Resources:
       - x86_64
       Environment:
         Variables:
-          SNS_TOPIC_ARN: !Ref SNSTopic
+          SNS_TOPIC_ARN: Ref SNSTopic
       Policies:
         - Version: '2012-10-17'
           Statement:
@@ -39,7 +39,7 @@ Resources:
             - Effect: Allow
               Action:
                 - 'sns:Publish'
-              Resource: !Ref SNSTopic
+              Resource: Ref SNSTopic
   
   ResourceCheckEventBridgeRule:
     Type: 'AWS::Events::Rule'
@@ -48,17 +48,17 @@ Resources:
       Description: 'Rule to trigger Lambda function'
       State: 'ENABLED'
       Targets:
-        - Arn: !GetAtt CheckSnapshotAgeFunction.Arn
+        - Arn: GetAtt CheckSnapshotAgeFunction.Arn
           Id: 'MyLambdaFunctionTarget'
       ScheduleExpression : cron(0/1 * * * ? *)
 
   LambdaInvokePermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
-      FunctionName: !Ref CheckSnapshotAgeFunction
+      FunctionName: Ref CheckSnapshotAgeFunction
       Action: 'lambda:InvokeFunction'
       Principal: 'events.amazonaws.com'
-      SourceArn: !GetAtt ResourceCheckEventBridgeRule.Arn
+      SourceArn: GetAtt ResourceCheckEventBridgeRule.Arn
   
   SNSTopic:
     Type: "AWS::SNS::Topic"
@@ -69,7 +69,7 @@ Resources:
   SNSSubscription:
     Type: "AWS::SNS::Subscription"
     Properties:
-      TopicArn: !Ref SNSTopic
+      TopicArn: Ref SNSTopic
       Protocol: "email"
       Endpoint: "heloise.viegas@creativecapsule.com"
 
@@ -83,7 +83,7 @@ Outputs:
   #   Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
   CheckSnapshotAgeFunction:
     Description: Check Snapshot Age Function ARN
-    Value: !GetAtt CheckSnapshotAgeFunction.Arn
+    Value: GetAtt CheckSnapshotAgeFunction.Arn
   CheckSnapshotAgeFunctionIamRole:
     Description: Implicit IAM Role created for Check Snapshot Age function
-    Value: !GetAtt CheckSnapshotAgeFunction.Arn
+    Value: GetAtt CheckSnapshotAgeFunction.Arn
